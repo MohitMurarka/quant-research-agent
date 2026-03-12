@@ -1,18 +1,29 @@
 from dotenv import load_dotenv
-from tools.fetch_data import fetch_price_data, fetch_summary
+from agents.planner import planner_node
+from agents.code_writer import code_writer_node
+from graph.state import ResearchState
 
 load_dotenv()
 
-# Test 1: raw price data
-data = fetch_price_data(["AAPL", "SPY"], "2020-01-01", "2023-01-01")
+initial_state: ResearchState = {
+    "hypothesis": "Apple stock outperforms the S&P500 in the month after an iPhone launch",
+    "sub_questions": [],
+    "assets": [],
+    "timeframe": {},
+    "generated_code": "",
+    "execution_result": {},
+    "analysis": {},
+    "iteration": 0,
+    "refined_hypothesis": "",
+    "final_report": "",
+    "status": "planning",
+}
 
-print("\n--- RAW DATA TEST ---")
-for ticker, df in data.items():
-    print(f"\n{ticker} - first 3 rows:")
-    print(df.head(3))
-    print(f"{ticker} - columns: {list(df.columns)}")
+# Step 1: Planner
+state = planner_node(initial_state)
 
-# Test 2: summary (this is what Code Writer will receive)
-print("\n--- SUMMARY TEST ---")
-summary = fetch_summary(["AAPL", "SPY"], "2020-01-01", "2023-01-01")
-print(summary)
+# Step 2: Code Writer
+state = code_writer_node(state)
+
+print("\n--- GENERATED CODE ---")
+print(state["generated_code"])
