@@ -1,31 +1,18 @@
 from dotenv import load_dotenv
-from agents.planner import planner_node
-from graph.state import ResearchState
+from tools.fetch_data import fetch_price_data, fetch_summary
 
 load_dotenv()
 
-# Create a minimal state with just a hypothesis
-initial_state: ResearchState = {
-    "hypothesis": "Apple stock outperforms the S&P500 in the month after an iPhone launch",
-    "sub_questions": [],
-    "assets": [],
-    "timeframe": {},
-    "generated_code": "",
-    "execution_result": {},
-    "analysis": {},
-    "iteration": 0,
-    "refined_hypothesis": "",
-    "final_report": "",
-    "status": "planning"
-}
+# Test 1: raw price data
+data = fetch_price_data(["AAPL", "SPY"], "2020-01-01", "2023-01-01")
 
-# Run the planner
-result = planner_node(initial_state)
+print("\n--- RAW DATA TEST ---")
+for ticker, df in data.items():
+    print(f"\n{ticker} - first 3 rows:")
+    print(df.head(3))
+    print(f"{ticker} - columns: {list(df.columns)}")
 
-print("\n--- PLANNER OUTPUT ---")
-print("Sub-questions:")
-for q in result["sub_questions"]:
-    print(f"  - {q}")
-print(f"Assets: {result['assets']}")
-print(f"Timeframe: {result['timeframe']}")
-print(f"Status: {result['status']}")
+# Test 2: summary (this is what Code Writer will receive)
+print("\n--- SUMMARY TEST ---")
+summary = fetch_summary(["AAPL", "SPY"], "2020-01-01", "2023-01-01")
+print(summary)
