@@ -1,14 +1,16 @@
 # Quant Research Agent
 
-An AI-powered agent that converts financial hypotheses into structured quantitative research.
+An AI-powered agent that converts financial hypotheses into structured quantitative research and automated strategy testing.
 
-The system uses Large Language Models (LLMs) to transform a hypothesis into a research plan, identify relevant financial assets, retrieve historical market data, and prepare datasets for quantitative analysis.
+The system uses Large Language Models (LLMs) to transform a hypothesis into a research plan, identify relevant financial assets, retrieve historical market data, generate backtesting strategies, and safely execute them in a sandbox environment.
 
 ---
 
 ## Overview
 
-Traditional quantitative research involves manually designing experiments, selecting assets, collecting historical data, and testing hypotheses. This project automates that workflow using an agent-based architecture.
+Traditional quantitative research involves manually designing experiments, selecting assets, collecting historical data, and testing hypotheses.
+
+This project automates that workflow using an **agent-based architecture**.
 
 Given a financial hypothesis, the agent:
 
@@ -16,7 +18,9 @@ Given a financial hypothesis, the agent:
 2. Identifies **relevant financial assets**
 3. Selects a **statistically meaningful timeframe**
 4. Retrieves **historical price and volume data**
-5. Prepares the data for further analysis
+5. Generates **quantitative strategy code**
+6. Executes strategies in a **secure sandbox**
+7. Analyzes the results for further research
 
 ---
 
@@ -30,13 +34,25 @@ Bitcoin tends to rise after halving events
 
 Generated research plan:
 
-* Assets: `BTC-USD`, `SPY`
-* Timeframe: `2016-01-01 → 2025-01-01`
-* Research Questions:
+Assets:
 
-  * Does BTC show positive returns within 90 days after halving?
-  * Is trading volume higher after halving events?
-  * Does BTC outperform SPY after halving periods?
+```
+BTC-USD, SPY
+```
+
+Timeframe:
+
+```
+2016-01-01 → 2025-01-01
+```
+
+Research Questions:
+
+- Does BTC show positive returns within 90 days after halving?
+- Is trading volume higher after halving events?
+- Does BTC outperform SPY after halving periods?
+
+The agent then generates **Python backtesting code**, executes it, and analyzes the results.
 
 ---
 
@@ -51,11 +67,15 @@ Planner Agent
     ↓
 Research Plan
     ↓
-Data Collection
+Market Data Fetcher
     ↓
-Market Dataset
+Dataset Summary
     ↓
-Quantitative Analysis
+Strategy Code Generator
+    ↓
+Sandbox Executor (E2B)
+    ↓
+Result Analysis
 ```
 
 Each stage operates as an independent node, enabling flexible and scalable research workflows.
@@ -64,13 +84,14 @@ Each stage operates as an independent node, enabling flexible and scalable resea
 
 ## Tech Stack
 
-* Python
-* LangGraph
-* LangChain
-* OpenAI API
-* yfinance
-* pandas
-* numpy
+- Python
+- LangGraph
+- LangChain
+- OpenAI API
+- yfinance
+- pandas
+- numpy
+- E2B sandbox for secure code execution
 
 ---
 
@@ -113,6 +134,7 @@ Create a `.env` file
 
 ```
 OPENAI_API_KEY=your_api_key
+E2B_API_KEY=your_e2b_key
 ```
 
 Run the project
@@ -132,7 +154,13 @@ quant-research-agent
 │   └── state.py
 │
 ├── nodes
-│   └── planner_node.py
+│   ├── planner_node.py
+│   ├── code_writer_node.py
+│   ├── executor_node.py
+│   └── analysis_node.py
+│
+├── tools
+│   └── fetch_data.py
 │
 ├── main.py
 ├── requirements.txt
@@ -144,4 +172,9 @@ quant-research-agent
 
 ## Status
 
-🚧 Work in progress — additional agents for data analysis, visualization, and automated research reporting are planned.
+🚧 Work in progress — upcoming improvements include:
+
+- portfolio-level strategy testing
+- performance visualization
+- automated strategy improvement (reflection agents)
+- risk and factor analysis
