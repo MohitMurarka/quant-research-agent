@@ -38,13 +38,24 @@ You must write Python code that:
     print(f"Annualized Return: {ann_return:.2f}%")
 - Saves one matplotlib chart as 'outputs/backtest_chart.png'
 - Has NO syntax errors
-- Uses only these libraries: yfinance, pandas, numpy, matplotlib
+- Uses only these libraries: yfinance, pandas, numpy, matplotlib, scipy
 
 CRITICAL RULES:
 - Return ONLY the Python code, no explanation, no markdown backticks
 - All data must be downloaded inside the code using yfinance
 - Always handle edge cases (empty data, division by zero)
 - The code must be fully self-contained and runnable as-is
+
+NUMPY / SCIPY RULES — MANDATORY:
+- ALWAYS wrap scipy stats results in float() immediately at assignment:
+    CORRECT:   t_stat = float(scipy.stats.ttest_ind(a, b).statistic)
+    CORRECT:   p_value = float(scipy.stats.ttest_ind(a, b).pvalue)
+    WRONG:     t_stat = scipy.stats.ttest_ind(a, b).statistic
+- NEVER use :.Xf formatting on a variable that might be a numpy array
+- For ANY variable you plan to format with :.2f or :.3f, cast it to float() first
+- When using .loc[] with dates, NEVER use exact timestamps — always use .iloc[] 
+  or slice with .loc[start:end] to avoid KeyError on non-trading days
+- Use df.index.asof(date) to find the nearest trading day to a given date
 """
 
 
@@ -73,14 +84,32 @@ Data available:
 Iteration: {iteration + 1}
 """
 
-    # If this is a retry, include the previous error
+    # If this is a retry, include the previous error with explicit fix instructions
     if iteration > 0 and state.get("execution_result", {}).get("error"):
         user_content += f"""
-Previous code had this error — fix it:
+PREVIOUS ATTEMPT FAILED. You must fix this specific error:
+
+ERROR:
 {state["execution_result"]["error"]}
 
-Previous broken code:
+ROOT CAUSE HINTS:
+1. If the error is "unsupported format string passed to numpy.ndarray.__format__":
+   - A numpy array is being formatted with :.Xf instead of a scalar
+   - Fix: wrap ALL scipy/numpy results in float() at assignment time
+   - Example: t_stat = float(scipy.stats.ttest_ind(a, b).statistic)
+
+2. If the error is a KeyError with a Timestamp:
+   - You used .loc[exact_date] but that date is not a trading day
+   - Fix: use df.index.asof(pd.Timestamp(date)) to get nearest trading day
+   - Or use .loc[start:end] slicing instead of exact date lookup
+
+3. If the error is about MultiIndex columns from yfinance:
+   - Fix: after downloading, flatten with df.columns = df.columns.get_level_values(0)
+
+PREVIOUS BROKEN CODE:
 {state["generated_code"]}
+
+Write the COMPLETE fixed code from scratch. Do not repeat the same mistake.
 """
 
     messages = [
@@ -94,7 +123,9 @@ Previous broken code:
     # Strip markdown backticks if LLM added them anyway
     if code.startswith("```"):
         lines = code.split("\n")
-        code = "\n".join(lines[1:-1])  # remove first and last lines
+        code = "\n".join(lines[1:-1])
+        if code.startswith("python"):
+            code = code[6:].strip()
 
     print(f"[CODE WRITER] Code generated ({len(code.splitlines())} lines)")
 

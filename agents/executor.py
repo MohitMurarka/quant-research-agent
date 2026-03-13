@@ -35,6 +35,9 @@ def executor_node(state: ResearchState) -> ResearchState:
                 stdout_lines.append(log)
 
             for log in execution.logs.stderr:
+                # Skip warnings — only catch real errors
+                if "warning" in log.lower() or "deprecat" in log.lower():
+                    continue
                 if any(
                     keyword in log.lower()
                     for keyword in [
