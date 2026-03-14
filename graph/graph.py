@@ -6,10 +6,11 @@ from agents.executor import executor_node
 from agents.analyst import analyst_node
 from agents.refiner import refiner_node
 from agents.report_writer import report_writer_node
+import os
 
-# ── Constants ────────────────────────────────────────────────
 MAX_CODE_RETRIES = 4
-MAX_REFINEMENTS = 2
+MAX_REFINEMENTS = int(os.environ.get("MAX_REFINEMENTS", 2))
+
 
 # ── Routing functions (pure logic, no LLM) ───────────────────
 

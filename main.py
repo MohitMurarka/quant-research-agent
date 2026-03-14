@@ -1,3 +1,5 @@
+import argparse
+import sys
 from dotenv import load_dotenv
 from graph.graph import build_graph
 from graph.state import ResearchState
@@ -5,50 +7,146 @@ from tools.graveyard import print_graveyard
 
 load_dotenv()
 
-def run_research(hypothesis: str):
-    print(f"\n{'='*60}")
-    print(f"AUTONOMOUS QUANT RESEARCH AGENT")
-    print(f"{'='*60}")
-    print(f"Hypothesis: {hypothesis}\n")
+
+# ── Terminal colors ───────────────────────────────────────────
+class C:
+    HEADER = "\033[95m"
+    BLUE = "\033[94m"
+    CYAN = "\033[96m"
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    RED = "\033[91m"
+    BOLD = "\033[1m"
+    DIM = "\033[2m"
+    RESET = "\033[0m"
+
+
+def banner():
+    print(
+        f"""
+{C.BOLD}{C.CYAN}╔══════════════════════════════════════════════════════════════╗
+║          AUTONOMOUS QUANT RESEARCH AGENT                     ║
+║          Powered by LangGraph + GPT-5-mini + E2B                 ║
+╚══════════════════════════════════════════════════════════════╝{C.RESET}
+"""
+    )
+
+
+def run_research(hypothesis: str, max_refinements: int = 2, verbose: bool = True):
+    if verbose:
+        banner()
+        print(f"{C.BOLD}Hypothesis:{C.RESET} {hypothesis}\n")
 
     initial_state: ResearchState = {
-        "hypothesis":         hypothesis,
-        "sub_questions":      [],
-        "assets":             [],
-        "timeframe":          {},
-        "generated_code":     "",
-        "execution_result":   {},
-        "analysis":           {},
-        "iteration":          0,
+        "hypothesis": hypothesis,
+        "sub_questions": [],
+        "assets": [],
+        "timeframe": {},
+        "generated_code": "",
+        "execution_result": {},
+        "analysis": {},
+        "iteration": 0,
         "refined_hypothesis": "",
-        "final_report":       "",
-        "status":             "planning"
+        "final_report": "",
+        "status": "planning",
     }
 
+    # Pass max_refinements to graph via env so routing respects it
+    import os
+
+    os.environ["MAX_REFINEMENTS"] = str(max_refinements)
+
     graph = build_graph()
+
+    print(f"{C.DIM}Starting research pipeline...{C.RESET}\n")
     final_state = graph.invoke(initial_state)
 
-    print(f"\n{'='*60}")
-    print(f"RESEARCH COMPLETE")
-    print(f"{'='*60}")
-    print(f"Final verdict   : {final_state['analysis'].get('verdict', 'N/A').upper()}")
-    print(f"Final status    : {final_state['status']}")
-    print(f"Total iterations: {final_state['iteration']}")
+    # ── Summary ──────────────────────────────────────────────
+    verdict = final_state["analysis"].get("verdict", "N/A").upper()
+    verdict_color = C.GREEN if verdict == "STRONG" else C.YELLOW
+
+    print(f"\n{C.BOLD}{'='*60}{C.RESET}")
+    print(f"{C.BOLD}RESEARCH COMPLETE{C.RESET}")
+    print(f"{C.BOLD}{'='*60}{C.RESET}")
+    print(f"Verdict      : {verdict_color}{C.BOLD}{verdict}{C.RESET}")
+    print(f"Status       : {final_state['status']}")
+    print(f"Iterations   : {final_state['iteration']}")
+
+    analysis = final_state.get("analysis", {})
+    if analysis.get("sharpe_ratio") is not None:
+        sharpe = analysis["sharpe_ratio"]
+        sharpe_color = C.GREEN if sharpe > 0.3 else C.RED
+        print(f"Sharpe Ratio : {sharpe_color}{sharpe:.3f}{C.RESET}")
+    if analysis.get("total_return") is not None:
+        ret = analysis["total_return"]
+        ret_color = C.GREEN if ret > 0 else C.RED
+        print(f"Total Return : {ret_color}{ret:.2f}%{C.RESET}")
+    if analysis.get("n_trades") is not None:
+        print(f"Trades       : {analysis['n_trades']}")
 
     if final_state.get("final_report"):
-        print("\n--- REPORT PREVIEW ---")
-        print(final_state["final_report"][:600])
-        print("...\n(Full report saved to outputs/)")
+        print(f"\n{C.DIM}--- Report Preview ---{C.RESET}")
+        print(final_state["final_report"][:500])
+        print(f"{C.DIM}...(full report saved to outputs/){C.RESET}")
 
     return final_state
 
 
-if __name__ == "__main__":
-    # Run a hypothesis
-    run_research(
-        "Bitcoin drops in the 7 days following a US Federal Reserve "
-        "interest rate hike announcement"
+def main():
+    parser = argparse.ArgumentParser(
+        description="Autonomous Quant Research Agent",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python main.py "Bitcoin drops after Fed rate hikes"
+  python main.py "Gold rises when dollar weakens" --max-refinements 3
+  python main.py "SPY momentum strategy" --quiet
+  python main.py --graveyard
+        """,
     )
 
-    # Show the full graveyard after run
+    parser.add_argument(
+        "hypothesis", nargs="?", help="The financial hypothesis to research"
+    )
+    parser.add_argument(
+        "--max-refinements",
+        type=int,
+        default=2,
+        metavar="N",
+        help="Maximum refinement rounds (default: 2)",
+    )
+    parser.add_argument(
+        "--graveyard",
+        action="store_true",
+        help="Show the hypothesis graveyard and exit",
+    )
+    parser.add_argument(
+        "--quiet", action="store_true", help="Suppress banner and extra output"
+    )
+
+    args = parser.parse_args()
+
+    # ── Show graveyard and exit ───────────────────────────────
+    if args.graveyard:
+        print_graveyard()
+        sys.exit(0)
+
+    # ── Require hypothesis if not showing graveyard ───────────
+    if not args.hypothesis:
+        print(f"{C.RED}Error: please provide a hypothesis.{C.RESET}")
+        print(f'{C.DIM}Usage: python main.py "your hypothesis here"{C.RESET}')
+        print(f"{C.DIM}       python main.py --graveyard{C.RESET}")
+        sys.exit(1)
+
+    run_research(
+        hypothesis=args.hypothesis,
+        max_refinements=args.max_refinements,
+        verbose=not args.quiet,
+    )
+
+    # Always show graveyard at the end
     print_graveyard()
+
+
+if __name__ == "__main__":
+    main()
