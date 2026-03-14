@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-llm = ChatOpenAI(model="gpt-4o", temperature=0.2)
+llm = ChatOpenAI(model="gpt-5-mini")
 
 CODE_WRITER_SYSTEM_PROMPT = """
 You are an expert quantitative analyst and Python programmer.
@@ -56,6 +56,14 @@ NUMPY / SCIPY RULES — MANDATORY:
 - When using .loc[] with dates, NEVER use exact timestamps — always use .iloc[] 
   or slice with .loc[start:end] to avoid KeyError on non-trading days
 - Use df.index.asof(date) to find the nearest trading day to a given date
+
+CHART RULES — MANDATORY:
+- You MUST save a chart to 'outputs/backtest_chart.png'
+- First line of your code must be: import os; os.makedirs('outputs', exist_ok=True)
+- Use plt.savefig('outputs/backtest_chart.png', dpi=100, bbox_inches='tight')
+- The chart must show something meaningful: returns over time, comparison bars, or equity curve
+- plt.close() after saving
+
 """
 
 
@@ -105,6 +113,18 @@ ROOT CAUSE HINTS:
 
 3. If the error is about MultiIndex columns from yfinance:
    - Fix: after downloading, flatten with df.columns = df.columns.get_level_values(0)
+   
+4. If the error is "The truth value of a Series is ambiguous":
+   - NEVER use `if series.std() != 0` or `if series.empty` inside ternary expressions
+   - Fix: use explicit scalar checks:
+       std_val = float(series.std())
+       sharpe = float((series.mean() - 0.04/52) / std_val * np.sqrt(52)) if std_val != 0 else 0.0
+   - For n_trades: use int(signal_series.sum().item()) or int(signal_series.values.sum())
+
+5. If the error is "cannot convert the series to int":
+   - Fix: always extract scalar before converting:
+       n_trades = int(signal_weeks.sum().item())
+   - Never use int() or float() directly on a pandas Series
 
 PREVIOUS BROKEN CODE:
 {state["generated_code"]}

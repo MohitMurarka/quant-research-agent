@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-llm = ChatOpenAI(model="gpt-4o", temperature=0)
+llm = ChatOpenAI(model="gpt-5-mini")
 
 PLANNER_SYSTEM_PROMPT = """
 You are a quantitative research planner. Your job is to take a financial hypothesis 
@@ -25,7 +25,9 @@ Given a hypothesis, you must return a JSON object with exactly these fields:
 
 Rules:
 - Assets must be valid yfinance ticker symbols
-- Timeframe should be at least 2 years for statistical significance
+- Timeframe MUST span at least 10 years to ensure enough events for statistical significance
+- Start date must be no later than 2010-01-01
+- End date should be 2024-01-01
 - Sub-questions must be specific and testable with price/volume data
 - Return ONLY the JSON, no extra text
 """
@@ -44,7 +46,7 @@ def planner_node(state: ResearchState) -> ResearchState:
     response = llm.invoke(messages)
 
     try:
-        plan = json.loads(response.content) #This converts text → Python dictionary.
+        plan = json.loads(response.content)  # This converts text → Python dictionary.
     except json.JSONDecodeError:
         # Sometimes LLM wraps in ```json ... ``` so we clean it up
         content = response.content.strip()
@@ -62,7 +64,7 @@ def planner_node(state: ResearchState) -> ResearchState:
     print(f"[PLANNER] Reasoning: {plan['reasoning']}")
 
     return {
-        **state, #This merges the new plan into the state.So basically updayes the changes in the original state
+        **state,  # This merges the new plan into the state.So basically updayes the changes in the original state
         "sub_questions": plan["sub_questions"],
         "assets": plan["assets"],
         "timeframe": plan["timeframe"],

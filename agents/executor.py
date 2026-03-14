@@ -16,17 +16,15 @@ def executor_node(state: ResearchState) -> ResearchState:
         with Sandbox.create() as sandbox:
             print("[EXECUTOR] Sandbox started. Installing dependencies...")
 
-            # Install required packages inside the sandbox
-            sandbox.commands.run("pip install yfinance pandas numpy matplotlib --quiet")
+            sandbox.commands.run(
+                "pip install yfinance pandas numpy matplotlib scipy --quiet"
+            )
             print("[EXECUTOR] Dependencies installed. Running backtest...")
 
-            # Create outputs directory inside sandbox
             sandbox.commands.run("mkdir -p outputs")
 
-            # Execute the backtesting code
             execution = sandbox.run_code(code)
 
-            # Collect stdout logs
             stdout_lines = []
             has_error = False
             error_text = ""
@@ -56,7 +54,6 @@ def executor_node(state: ResearchState) -> ResearchState:
 
             stdout = "\n".join(stdout_lines).strip()
 
-            # Check execution error object
             if execution.error:
                 has_error = True
                 error_text = f"{execution.error.name}: {execution.error.value}\n{execution.error.traceback}"
@@ -65,7 +62,7 @@ def executor_node(state: ResearchState) -> ResearchState:
                 print("[EXECUTOR] Code ran successfully")
                 print(f"[EXECUTOR] Output:\n{stdout}")
 
-                # Try to download the chart
+                # Try to download the chart from sandbox
                 chart_saved = False
                 try:
                     chart_data = sandbox.files.read("outputs/backtest_chart.png")
@@ -75,7 +72,21 @@ def executor_node(state: ResearchState) -> ResearchState:
                     chart_saved = True
                     print("[EXECUTOR] Chart saved to outputs/backtest_chart.png")
                 except Exception:
-                    print("[EXECUTOR] No chart file found (skipping)")
+                    print(
+                        "[EXECUTOR] No chart from sandbox — generating fallback chart..."
+                    )
+                    from tools.fetch_data import generate_fallback_chart
+
+                    hypothesis = state.get("refined_hypothesis") or state["hypothesis"]
+                    chart_saved = generate_fallback_chart(stdout, hypothesis)
+                    if chart_saved:
+                        print(
+                            "[EXECUTOR] Fallback chart saved to outputs/backtest_chart.png"
+                        )
+                    else:
+                        print(
+                            "[EXECUTOR] Could not generate chart — no parseable metrics"
+                        )
 
                 return {
                     **state,

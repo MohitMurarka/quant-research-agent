@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-llm = ChatOpenAI(model="gpt-4o", temperature=0)
+llm = ChatOpenAI(model="gpt-5-mini")
 
 ANALYST_SYSTEM_PROMPT = """
 You are a quantitative research analyst with deep expertise in statistics and financial markets.
@@ -33,7 +33,7 @@ You must return a JSON object with exactly these fields:
 }
 
 Verdict rules — mark as STRONG only if ALL of these are true:
-- Sharpe ratio > 0.5 (or clearly trending positive)
+- Sharpe ratio > 0.3 (or clearly trending positive)
 - At least 10 trades/events analyzed
 - Win rate > 50% (if applicable)
 - Results are not obviously driven by a single outlier

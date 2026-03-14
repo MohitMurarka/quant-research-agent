@@ -100,7 +100,7 @@ Each stage operates as an independent node, enabling flexible and scalable resea
 Clone the repository
 
 ```
-git clone https://github.com/yourusername/quant-research-agent.git
+git clone https://github.com/MohitMurarka/quant-research-agent.git
 cd quant-research-agent
 ```
 
