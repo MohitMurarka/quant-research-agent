@@ -1,5 +1,6 @@
 import argparse
 import sys
+import os
 from dotenv import load_dotenv
 from graph.graph import build_graph
 from graph.state import ResearchState
@@ -26,16 +27,24 @@ def banner():
         f"""
 {C.BOLD}{C.CYAN}╔══════════════════════════════════════════════════════════════╗
 ║          AUTONOMOUS QUANT RESEARCH AGENT                     ║
-║          Powered by LangGraph + GPT-5-mini + E2B                 ║
+║          Powered by LangGraph + GPT-4o + E2B                 ║
 ╚══════════════════════════════════════════════════════════════╝{C.RESET}
 """
     )
 
 
-def run_research(hypothesis: str, max_refinements: int = 2, verbose: bool = True):
+def run_research(
+    hypothesis: str,
+    max_refinements: int = 2,
+    verbose: bool = True,
+    auto_approve: bool = False,
+):
     if verbose:
         banner()
         print(f"{C.BOLD}Hypothesis:{C.RESET} {hypothesis}\n")
+
+    os.environ["MAX_REFINEMENTS"] = str(max_refinements)
+    os.environ["AUTO_APPROVE"] = "1" if auto_approve else "0"
 
     initial_state: ResearchState = {
         "hypothesis": hypothesis,
@@ -49,12 +58,9 @@ def run_research(hypothesis: str, max_refinements: int = 2, verbose: bool = True
         "refined_hypothesis": "",
         "final_report": "",
         "status": "planning",
+        "human_approved": False,
+        "human_feedback": "",
     }
-
-    # Pass max_refinements to graph via env so routing respects it
-    import os
-
-    os.environ["MAX_REFINEMENTS"] = str(max_refinements)
 
     graph = build_graph()
 
@@ -100,7 +106,8 @@ def main():
 Examples:
   python main.py "Bitcoin drops after Fed rate hikes"
   python main.py "Gold rises when dollar weakens" --max-refinements 3
-  python main.py "SPY momentum strategy" --quiet
+  python main.py "SPY momentum strategy" --auto-approve
+  python main.py "VIX spikes before crashes" --quiet --auto-approve
   python main.py --graveyard
         """,
     )
@@ -123,6 +130,11 @@ Examples:
     parser.add_argument(
         "--quiet", action="store_true", help="Suppress banner and extra output"
     )
+    parser.add_argument(
+        "--auto-approve",
+        action="store_true",
+        help="Skip human review and run fully autonomously",
+    )
 
     args = parser.parse_args()
 
@@ -131,7 +143,7 @@ Examples:
         print_graveyard()
         sys.exit(0)
 
-    # ── Require hypothesis if not showing graveyard ───────────
+    # ── Require hypothesis ────────────────────────────────────
     if not args.hypothesis:
         print(f"{C.RED}Error: please provide a hypothesis.{C.RESET}")
         print(f'{C.DIM}Usage: python main.py "your hypothesis here"{C.RESET}')
@@ -142,9 +154,9 @@ Examples:
         hypothesis=args.hypothesis,
         max_refinements=args.max_refinements,
         verbose=not args.quiet,
+        auto_approve=args.auto_approve,
     )
 
-    # Always show graveyard at the end
     print_graveyard()
 
 

@@ -13,3 +13,6 @@ class ResearchState(TypedDict):
     refined_hypothesis: str  # updated hypothesis from refiner
     final_report: str  # final markdown report
     status: str  # "planning" | "coding" | "executing" | "analysing" | "refining" | "reporting" | "done"
+    # Human-in-the-loop fields
+    human_approved: bool
+    human_feedback: str
