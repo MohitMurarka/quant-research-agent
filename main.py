@@ -4,6 +4,7 @@ from agents.code_writer import code_writer_node
 from agents.executor import executor_node
 from agents.analyst import analyst_node
 from agents.refiner import refiner_node
+from agents.report_writer import report_writer_node
 from graph.state import ResearchState
 
 load_dotenv()
@@ -25,21 +26,17 @@ initial_state: ResearchState = {
 MAX_CODE_RETRIES = 4
 MAX_REFINEMENTS = 2
 
-# Step 1: Plan once
 state = planner_node(initial_state)
 
-# Step 2: Research loop
 for refinement_round in range(MAX_REFINEMENTS + 1):
     print(f"\n{'='*50}")
     print(f"RESEARCH ROUND {refinement_round + 1}")
     print(f"Hypothesis: {state.get('refined_hypothesis') or state['hypothesis']}")
     print(f"{'='*50}")
 
-    # Code → Execute loop
     state = code_writer_node(state)
     state = executor_node(state)
 
-    # Retry on code errors
     retries = 0
     while not state["execution_result"]["success"] and retries < MAX_CODE_RETRIES:
         retries += 1
@@ -47,26 +44,27 @@ for refinement_round in range(MAX_REFINEMENTS + 1):
         state = code_writer_node(state)
         state = executor_node(state)
 
-    # Analyse results
-    if state["execution_result"]["success"]:
-        state = analyst_node(state)
-    else:
+    if not state["execution_result"]["success"]:
         print("\n[PIPELINE] Code failed after max retries — stopping")
         break
 
-    # Check verdict
+    state = analyst_node(state)
+
     if state["analysis"].get("verdict") == "strong":
         print("\n[PIPELINE] Strong results — proceeding to report")
+        state = report_writer_node(state)
         break
     elif refinement_round < MAX_REFINEMENTS:
-        print(
-            f"\n[PIPELINE] Weak results — refining hypothesis (round {refinement_round + 1})"
-        )
+        print(f"\n[PIPELINE] Weak results — refining (round {refinement_round + 1})")
         state = refiner_node(state)
     else:
-        print("\n[PIPELINE] Max refinements reached — reporting best results found")
+        print("\n[PIPELINE] Max refinements reached — reporting best results")
+        state = report_writer_node(state)
 
 print("\n--- PIPELINE COMPLETE ---")
-print(f"Final hypothesis: {state.get('refined_hypothesis') or state['hypothesis']}")
 print(f"Final verdict: {state['analysis'].get('verdict', 'N/A').upper()}")
-print(f"Final status: {state['status']}")
+print(f"Status: {state['status']}")
+
+if state.get("final_report"):
+    print("\n--- REPORT PREVIEW (first 500 chars) ---")
+    print(state["final_report"][:500])
