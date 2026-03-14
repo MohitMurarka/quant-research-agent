@@ -1,9 +1,9 @@
 from dotenv import load_dotenv
 from graph.graph import build_graph
 from graph.state import ResearchState
+from tools.graveyard import print_graveyard
 
 load_dotenv()
-
 
 def run_research(hypothesis: str):
     print(f"\n{'='*60}")
@@ -12,17 +12,17 @@ def run_research(hypothesis: str):
     print(f"Hypothesis: {hypothesis}\n")
 
     initial_state: ResearchState = {
-        "hypothesis": hypothesis,
-        "sub_questions": [],
-        "assets": [],
-        "timeframe": {},
-        "generated_code": "",
-        "execution_result": {},
-        "analysis": {},
-        "iteration": 0,
+        "hypothesis":         hypothesis,
+        "sub_questions":      [],
+        "assets":             [],
+        "timeframe":          {},
+        "generated_code":     "",
+        "execution_result":   {},
+        "analysis":           {},
+        "iteration":          0,
         "refined_hypothesis": "",
-        "final_report": "",
-        "status": "planning",
+        "final_report":       "",
+        "status":             "planning"
     }
 
     graph = build_graph()
@@ -31,8 +31,8 @@ def run_research(hypothesis: str):
     print(f"\n{'='*60}")
     print(f"RESEARCH COMPLETE")
     print(f"{'='*60}")
-    print(f"Final verdict : {final_state['analysis'].get('verdict', 'N/A').upper()}")
-    print(f"Final status  : {final_state['status']}")
+    print(f"Final verdict   : {final_state['analysis'].get('verdict', 'N/A').upper()}")
+    print(f"Final status    : {final_state['status']}")
     print(f"Total iterations: {final_state['iteration']}")
 
     if final_state.get("final_report"):
@@ -44,8 +44,11 @@ def run_research(hypothesis: str):
 
 
 if __name__ == "__main__":
+    # Run a hypothesis
     run_research(
-        "Gold prices rise when the US dollar weakens — "
-        "buying GLD when UUP drops more than 1% in a week "
-        "generates positive returns"
+        "Bitcoin drops in the 7 days following a US Federal Reserve "
+        "interest rate hike announcement"
     )
+
+    # Show the full graveyard after run
+    print_graveyard()

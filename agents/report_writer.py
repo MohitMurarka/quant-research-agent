@@ -1,6 +1,7 @@
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from graph.state import ResearchState
+from tools.graveyard import log_to_graveyard
 from datetime import datetime
 import os
 from dotenv import load_dotenv
@@ -12,7 +13,7 @@ llm = ChatOpenAI(model="gpt-5-mini")
 REPORT_WRITER_SYSTEM_PROMPT = """
 You are a professional quantitative research analyst writing a formal research report.
 
-You will receive the full research session data: original hypothesis, all refined 
+You will receive the full research session data: original hypothesis, all refined
 hypotheses tried, backtest results, and the analyst's verdict.
 
 Write a professional markdown research report with these exact sections:
@@ -37,14 +38,12 @@ Guidelines:
 - If results are strong, explain the caveats clearly
 - Length: 600-900 words
 - Return ONLY the markdown, no extra text
-
 """
 
 
 def report_writer_node(state: ResearchState) -> ResearchState:
     print("\n[REPORT WRITER] Generating research report...")
 
-    # Build full research history
     original_hypothesis = state["hypothesis"]
     final_hypothesis = state.get("refined_hypothesis") or original_hypothesis
     analysis = state.get("analysis", {})
@@ -59,7 +58,8 @@ def report_writer_node(state: ResearchState) -> ResearchState:
     messages = [
         SystemMessage(content=REPORT_WRITER_SYSTEM_PROMPT),
         HumanMessage(
-            content=f"""RESEARCH SESSION DATA:
+            content=f"""
+RESEARCH SESSION DATA:
 
 Original Hypothesis: {original_hypothesis}
 Final Hypothesis Tested: {final_hypothesis}
@@ -85,9 +85,10 @@ Analyst Assessment:
 - Issues: {analysis.get('issues')}
 - Reasoning: {analysis.get('reasoning')}
 
-Hypothesis Evolution (all versions tried):
+Hypothesis Evolution:
 1. Original: {original_hypothesis}
-2. Final: {final_hypothesis}"""
+2. Final: {final_hypothesis}
+"""
         ),
     ]
 
@@ -103,13 +104,11 @@ Hypothesis Evolution (all versions tried):
         f.write(report)
         if chart_saved:
             f.write("\n\n---\n*Chart: See backtest_chart.png in outputs directory*\n")
-      
+
     print(f"[REPORT WRITER] Report saved to {report_path}")
     print(f"[REPORT WRITER] Verdict in report: {verdict}")
 
-    return {
-        **state,
-        "final_report": report,
-        "status": "done"
-    }
-      
+    # Log to graveyard
+    log_to_graveyard(state, report_path)
+
+    return {**state, "final_report": report, "status": "done"}
