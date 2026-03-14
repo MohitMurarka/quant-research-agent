@@ -125,6 +125,11 @@ ROOT CAUSE HINTS:
    - Fix: always extract scalar before converting:
        n_trades = int(signal_weeks.sum().item())
    - Never use int() or float() directly on a pandas Series
+   
+6. If the error is "module 'scipy.stats' has no attribute 'binom_test'":
+   - binom_test was removed in scipy 1.11+
+   - Fix: replace with scipy.stats.binomtest(k, n, p).pvalue
+   - Example: p = float(scipy.stats.binomtest(hits, n, p0).pvalue)
 
 PREVIOUS BROKEN CODE:
 {state["generated_code"]}

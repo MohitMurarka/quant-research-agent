@@ -2,6 +2,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from graph.state import ResearchState
 import json
+import re
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -41,13 +42,13 @@ Verdict rules — mark as STRONG only if ALL of these are true:
 
 Mark as WEAK if ANY of these are true:
 - Fewer than 5 trades/events analyzed
-- Sharpe ratio < 0 
+- Sharpe ratio < 0
 - Results look like errors or placeholders
 - Output is missing key metrics
 - The hypothesis is too narrow to be testable
 
 IMPORTANT: If iteration >= 2 and results are borderline, be more lenient.
-Return ONLY the JSON, no extra text.
+Return ONLY the JSON, no extra text, no markdown fences.
 """
 
 
@@ -59,7 +60,7 @@ def analyst_node(state: ResearchState) -> ResearchState:
     iteration = state.get("iteration", 0)
 
     if not output:
-        print("[ANALYST] No output to analyze - marking as weak")
+        print("[ANALYST] No output to analyze — marking as weak")
         return {
             **state,
             "analysis": {
@@ -81,7 +82,7 @@ def analyst_node(state: ResearchState) -> ResearchState:
         SystemMessage(content=ANALYST_SYSTEM_PROMPT),
         HumanMessage(
             content=f"""
-        Hypothesis: {hypothesis}
+Hypothesis: {hypothesis}
 
 Backtest Output:
 {output}
@@ -95,24 +96,45 @@ Iteration: {iteration}
 
     try:
         content = response.content.strip()
+        # Strip markdown fences if present
         if content.startswith("```"):
             content = content.split("```")[1]
             if content.startswith("json"):
                 content = content[4:]
-        analysis = json.loads(content.strip())
+            content = content.strip()
+        analysis = json.loads(content)
     except json.JSONDecodeError:
-        analysis = {
-            "verdict": "weak",
-            "issues": ["Failed to parse analyst response"],
-            "strengths": [],
-            "reasoning": response.content,
-            "suggested_refinement": "Retry with cleaner output format",
-            "sharpe_ratio": None,
-            "total_return": None,
-            "win_rate": None,
-            "n_trades": None,
-            "max_drawdown": None,
-        }
+        # Try to extract JSON object from anywhere in the response
+        match = re.search(r"\{.*\}", response.content, re.DOTALL)
+        if match:
+            try:
+                analysis = json.loads(match.group())
+            except json.JSONDecodeError:
+                analysis = {
+                    "verdict": "weak",
+                    "issues": ["Failed to parse analyst response"],
+                    "strengths": [],
+                    "reasoning": response.content,
+                    "suggested_refinement": "Retry with cleaner output format",
+                    "sharpe_ratio": None,
+                    "total_return": None,
+                    "win_rate": None,
+                    "n_trades": None,
+                    "max_drawdown": None,
+                }
+        else:
+            analysis = {
+                "verdict": "weak",
+                "issues": ["Failed to parse analyst response"],
+                "strengths": [],
+                "reasoning": response.content,
+                "suggested_refinement": "Retry",
+                "sharpe_ratio": None,
+                "total_return": None,
+                "win_rate": None,
+                "n_trades": None,
+                "max_drawdown": None,
+            }
 
     verdict = analysis.get("verdict", "weak")
 
