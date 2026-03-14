@@ -63,20 +63,31 @@ def run_research(
     }
 
     graph = build_graph()
-
     print(f"{C.DIM}Starting research pipeline...{C.RESET}\n")
-    final_state = graph.invoke(initial_state)
+
+    # ── Stream node-by-node ───────────────────────────────────
+    from tools.streaming import print_stream_event
+
+    final_state = None
+    for event in graph.stream(initial_state, stream_mode="updates"):
+        for node_name, node_state in event.items():
+            print_stream_event(node_name, node_state)
+            final_state = node_state
+
+    if final_state is None:
+        print(f"{C.RED}Pipeline produced no output.{C.RESET}")
+        return None
 
     # ── Summary ──────────────────────────────────────────────
-    verdict = final_state["analysis"].get("verdict", "N/A").upper()
+    verdict = final_state.get("analysis", {}).get("verdict", "N/A").upper()
     verdict_color = C.GREEN if verdict == "STRONG" else C.YELLOW
 
     print(f"\n{C.BOLD}{'='*60}{C.RESET}")
     print(f"{C.BOLD}RESEARCH COMPLETE{C.RESET}")
     print(f"{C.BOLD}{'='*60}{C.RESET}")
     print(f"Verdict      : {verdict_color}{C.BOLD}{verdict}{C.RESET}")
-    print(f"Status       : {final_state['status']}")
-    print(f"Iterations   : {final_state['iteration']}")
+    print(f"Status       : {final_state.get('status', 'N/A')}")
+    print(f"Iterations   : {final_state.get('iteration', 0)}")
 
     analysis = final_state.get("analysis", {})
     if analysis.get("sharpe_ratio") is not None:
