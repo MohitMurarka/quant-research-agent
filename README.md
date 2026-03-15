@@ -35,28 +35,28 @@ This system uses a **cyclic graph architecture** with persistent state managemen
 graph TD
     A([🧑 User Hypothesis]) --> B
 
-    B["🔍 Planner\nBreaks hypothesis into sub-questions,\nselects assets + timeframe.\nReads Graveyard to avoid repeating work."]
+    B["🔍 Planner"]
     B --> C
 
-    C["👤 Human Review\nShows research plan to user.\nUser can approve, edit, or skip."]
+    C["👤 Human Review"]
     C -- Approved --> D
     C -- Skipped --> J
 
-    D["✍️ Code Writer\nWrites self-contained Python\nbacktesting code using GPT-4o."]
+    D["✍️ Code Writer"]
     D --> E
 
-    E["⚙️ Executor\nRuns code in isolated E2B\ncloud sandbox. Never touches\nhost filesystem."]
+    E["⚙️ Executor"]
     E -- Code Failed --> D
     E -- Success --> F
 
-    F["📊 Analyst\nEvaluates Sharpe ratio, win rate,\np-values, drawdown.\nReturns STRONG or WEAK verdict."]
+    F["📊 Analyst"]
     F -- STRONG --> J
     F -- WEAK --> G
 
-    G["🔄 Refiner\nProduces a meaningfully different\nhypothesis addressing the\nanalyst's specific criticisms."]
+    G["🔄 Refiner"]
     G -- New Hypothesis --> D
 
-    J["📝 Report Writer\nGenerates professional markdown\nreport. Logs session to the\nHypothesis Graveyard."]
+    J["📝 Report Writer"]
     J --> K([✅ Done])
 
     style A fill:#FFE500,stroke:#0a0a0a,color:#0a0a0a
