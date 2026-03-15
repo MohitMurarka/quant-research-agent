@@ -1,180 +1,237 @@
-# Quant Research Agent
+# ⚡ Autonomous Quant Research Agent
 
-An AI-powered agent that converts financial hypotheses into structured quantitative research and automated strategy testing.
+An end-to-end agentic AI system that autonomously researches financial hypotheses — writing backtesting code, executing it in a secure sandbox, evaluating results statistically, refining weak hypotheses, and generating professional research reports.
 
-The system uses Large Language Models (LLMs) to transform a hypothesis into a research plan, identify relevant financial assets, retrieve historical market data, generate backtesting strategies, and safely execute them in a sandbox environment.
-
----
-
-## Overview
-
-Traditional quantitative research involves manually designing experiments, selecting assets, collecting historical data, and testing hypotheses.
-
-This project automates that workflow using an **agent-based architecture**.
-
-Given a financial hypothesis, the agent:
-
-1. Breaks it into **testable research questions**
-2. Identifies **relevant financial assets**
-3. Selects a **statistically meaningful timeframe**
-4. Retrieves **historical price and volume data**
-5. Generates **quantitative strategy code**
-6. Executes strategies in a **secure sandbox**
-7. Analyzes the results for further research
+Built with **LangGraph**, **GPT-4o**, **E2B**, and **React**.
 
 ---
 
-## Example Hypothesis
+## Demo
 
-Input:
+> _"Gold prices rise when the US dollar weakens"_
 
-```
-Bitcoin tends to rise after halving events
-```
+The system autonomously:
 
-Generated research plan:
+1. Plans the research approach and identifies relevant assets
+2. Writes Python backtesting code from scratch
+3. Executes it securely in an isolated cloud sandbox
+4. Evaluates statistical significance (Sharpe ratio, p-values, bootstrap CIs)
+5. Refines the hypothesis if results are weak
+6. Generates a professional markdown research report
+7. Logs everything to a persistent Hypothesis Graveyard
 
-Assets:
-
-```
-BTC-USD, SPY
-```
-
-Timeframe:
-
-```
-2016-01-01 → 2025-01-01
-```
-
-Research Questions:
-
-- Does BTC show positive returns within 90 days after halving?
-- Is trading volume higher after halving events?
-- Does BTC outperform SPY after halving periods?
-
-The agent then generates **Python backtesting code**, executes it, and analyzes the results.
+![Research Tab](docs/screenshot_research.png)
+![Graveyard Tab](docs/screenshot_graveyard.png)
 
 ---
 
 ## Architecture
 
-The system is built using a **modular agent pipeline**.
-
 ```
-Hypothesis
-    ↓
-Planner Agent
-    ↓
-Research Plan
-    ↓
-Market Data Fetcher
-    ↓
-Dataset Summary
-    ↓
-Strategy Code Generator
-    ↓
-Sandbox Executor (E2B)
-    ↓
-Result Analysis
+User Hypothesis
+      │
+      ▼
+┌─────────────┐     ┌──────────────┐
+│   Planner   │────▶│ Human Review │  (approve / edit / skip)
+└─────────────┘     └──────────────┘
+                            │
+                            ▼
+                    ┌──────────────┐
+                    │ Code Writer  │◀──────────────┐
+                    └──────────────┘               │
+                            │                      │ fix error
+                            ▼                      │
+                    ┌──────────────┐               │
+                    │   Executor   │───── fail ────┘
+                    │  (E2B Sand.) │
+                    └──────────────┘
+                            │ success
+                            ▼
+                    ┌──────────────┐
+                    │   Analyst    │────── strong ──▶ Report Writer ──▶ END
+                    └──────────────┘
+                            │ weak
+                            ▼
+                    ┌──────────────┐
+                    │   Refiner    │──▶ Code Writer (new hypothesis)
+                    └──────────────┘
 ```
 
-Each stage operates as an independent node, enabling flexible and scalable research workflows.
+### Agent Roles
+
+| Agent             | Responsibility                                                                                                                      |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **Planner**       | Breaks hypothesis into sub-questions, selects assets and timeframe. Reads past research from the Graveyard to avoid repeating work. |
+| **Human Review**  | Pauses execution so the user can approve, edit, or reject the research plan before any code is written.                             |
+| **Code Writer**   | Writes self-contained Python backtesting code. Receives error messages on failure and auto-fixes.                                   |
+| **Executor**      | Runs code in an E2B cloud sandbox. LLM-generated code never touches the host filesystem.                                            |
+| **Analyst**       | Evaluates results statistically — Sharpe ratio, win rate, p-values, drawdown. Returns `strong` or `weak` verdict.                   |
+| **Refiner**       | If results are weak, produces a meaningfully different hypothesis and sends the system back to Code Writer.                         |
+| **Report Writer** | Generates a professional markdown research report and logs the session to the Hypothesis Graveyard.                                 |
+
+---
+
+## Key Design Decisions
+
+**Why LangGraph?**
+LangGraph allows defining the agent workflow as a stateful graph with conditional edges. The retry loop (Executor → Code Writer on failure) and the refinement loop (Analyst → Refiner → Code Writer on weak results) are first-class graph constructs — not hardcoded Python loops.
+
+**Why E2B for code execution?**
+LLM-generated code is untrusted by definition. Running it with `exec()` or `subprocess` on the host machine is a security risk. E2B executes each backtest in an isolated cloud VM that cannot access the host filesystem or network. This is the production-grade approach used by systems like Cognition/Devin.
+
+**Why a Hypothesis Graveyard?**
+Most financial hypotheses don't hold in data — that's real finance, not a bug. The Graveyard gives the system persistent memory across sessions. The Planner reads past research before starting, avoiding repeated approaches. Over time the system builds an institutional knowledge base of what has and hasn't worked.
+
+**Why human-in-the-loop?**
+Fully autonomous agents make mistakes at the planning stage that propagate through the entire pipeline. Pausing after the Planner to show the user the research plan (assets, timeframe, sub-questions) before writing any code catches these mistakes cheaply. The user can edit or reject the plan without wasting API calls on a bad backtest.
 
 ---
 
 ## Tech Stack
 
-- Python
-- LangGraph
-- LangChain
-- OpenAI API
-- yfinance
-- pandas
-- numpy
-- E2B sandbox for secure code execution
-
----
-
-## Setup
-
-Clone the repository
-
-```
-git clone https://github.com/MohitMurarka/quant-research-agent.git
-cd quant-research-agent
-```
-
-Create a virtual environment
-
-```
-python -m venv venv
-```
-
-Activate it
-
-Windows
-
-```
-venv\Scripts\activate
-```
-
-Mac/Linux
-
-```
-source venv/bin/activate
-```
-
-Install dependencies
-
-```
-pip install -r requirements.txt
-```
-
-Create a `.env` file
-
-```
-OPENAI_API_KEY=your_api_key
-E2B_API_KEY=your_e2b_key
-```
-
-Run the project
-
-```
-python main.py
-```
+| Layer               | Technology                    |
+| ------------------- | ----------------------------- |
+| Agent Orchestration | LangGraph                     |
+| LLM                 | GPT-4o (OpenAI)               |
+| Code Execution      | E2B Cloud Sandbox             |
+| Financial Data      | yfinance                      |
+| Backend API         | FastAPI                       |
+| Frontend            | React                         |
+| Persistent Memory   | SQLite (Hypothesis Graveyard) |
+| Backtesting         | pandas, numpy, scipy          |
+| Charts              | matplotlib                    |
 
 ---
 
 ## Project Structure
 
 ```
-quant-research-agent
+quant-research-agent/
 │
-├── graph
-│   └── state.py
+├── agents/                  # One file per agent
+│   ├── planner.py
+│   ├── code_writer.py
+│   ├── executor.py
+│   ├── analyst.py
+│   ├── refiner.py
+│   ├── report_writer.py
+│   └── human_review.py
 │
-├── nodes
-│   ├── planner_node.py
-│   ├── code_writer_node.py
-│   ├── executor_node.py
-│   └── analysis_node.py
+├── graph/
+│   ├── state.py             # LangGraph state schema
+│   └── graph.py             # Graph definition + routing functions
 │
-├── tools
-│   └── fetch_data.py
+├── tools/
+│   ├── fetch_data.py        # yfinance data fetcher
+│   ├── graveyard.py         # SQLite persistence layer
+│   └── streaming.py         # Terminal streaming output
 │
-├── main.py
-├── requirements.txt
-├── .env.example
-└── README.md
+├── api/
+│   └── main.py              # FastAPI backend
+│
+├── outputs/                 # Generated reports + charts
+├── main.py                  # CLI entry point
+└── quant-frontend/          # React frontend
 ```
 
 ---
 
-## Status
+## Setup
 
-🚧 Work in progress — upcoming improvements include:
+### Prerequisites
 
-- portfolio-level strategy testing
-- performance visualization
-- automated strategy improvement (reflection agents)
-- risk and factor analysis
+- Python 3.11+
+- Node.js 18+
+- OpenAI API key
+- E2B API key (free tier at [e2b.dev](https://e2b.dev))
+
+### Installation
+
+```bash
+# Clone the repo
+git clone https://github.com/yourusername/quant-research-agent
+cd quant-research-agent
+
+# Create virtual environment
+python -m venv venv
+venv\Scripts\activate  # Windows
+source venv/bin/activate  # Mac/Linux
+
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Set up environment variables
+cp .env.example .env
+# Add your OPENAI_API_KEY and E2B_API_KEY to .env
+```
+
+### Running
+
+```bash
+# Terminal 1 — Start the API
+uvicorn api.main:app --reload --port 8000
+
+# Terminal 2 — Start the frontend
+cd quant-frontend
+npm install
+npm start
+
+# Or use the CLI directly
+python main.py "Gold rises when the dollar weakens"
+python main.py "SPY momentum strategy" --auto-approve --max-refinements 3
+python main.py --graveyard
+```
+
+---
+
+## CLI Usage
+
+```bash
+# Run a hypothesis interactively (shows plan, waits for approval)
+python main.py "your hypothesis here"
+
+# Skip human review
+python main.py "your hypothesis here" --auto-approve
+
+# More refinement rounds
+python main.py "your hypothesis here" --max-refinements 3
+
+# View all past research
+python main.py --graveyard
+
+# Quiet mode
+python main.py "your hypothesis here" --auto-approve --quiet
+```
+
+---
+
+## Example Hypotheses to Try
+
+```
+"Gold rises when the US dollar weakens"
+"Bitcoin drops in the 7 days after a Fed rate hike"
+"SPY outperforms in January every year"
+"Tesla stock drops in the week after Elon Musk tweets"
+"VIX spikes above 30 predict market recoveries"
+"Apple outperforms the S&P500 after iPhone launches"
+```
+
+---
+
+## What I Learned
+
+Building this taught me several things that tutorials don't cover:
+
+**Agentic loops are hard to debug.** When an agent fails 3 iterations in, the error might have originated in the Planner's choice of assets. Understanding how state propagates through a LangGraph is essential.
+
+**LLM-generated code fails in consistent, fixable ways.** The same numpy/pandas errors appeared repeatedly. The solution was making error messages more explicit and adding domain-specific fix hints to the Code Writer's retry prompt.
+
+**Most financial hypotheses don't hold in data.** This isn't a bug — it's the point. A system that rigorously tests and rejects hypotheses is more valuable than one that confirms them. The Hypothesis Graveyard turned this insight into a feature.
+
+**Human-in-the-loop is a design pattern, not a fallback.** Inserting a human approval step after planning and before execution is architecturally significant. It separates reasoning from action, which is the right boundary for agentic systems.
+
+---
+
+## License
+
+MIT
