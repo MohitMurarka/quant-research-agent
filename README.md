@@ -2,7 +2,7 @@
 
 > _An agentic AI system that thinks like a quant researcher — autonomously writing backtesting code, stress-testing financial hypotheses, and generating institutional-grade research reports._
 
-Built with **LangGraph** · **GPT-4o** · **E2B Sandboxed Execution** · **React**
+Built with **LangGraph** · **GPT-5-mini** · **E2B Sandboxed Execution** · **React**
 
 ---
 
@@ -11,7 +11,7 @@ Built with **LangGraph** · **GPT-4o** · **E2B Sandboxed Execution** · **React
 You give it a hypothesis. It does the rest.
 
 ```
-"Gold prices rise when the US dollar weakens"
+"S&P500 has positive returns over any rolling 10-year period"
 ```
 
 The system autonomously:
@@ -174,7 +174,7 @@ quant-research-agent/
 
 ```bash
 # Clone the repo
-git clone https://github.com/yourusername/quant-research-agent
+git clone https://github.com/MohitMurarka/quant-research-agent
 cd quant-research-agent
 
 # Create virtual environment
