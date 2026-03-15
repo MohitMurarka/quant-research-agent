@@ -29,7 +29,7 @@ const EXAMPLES = [
   "Bitcoin drops after Fed rate hikes",
   "SPY momentum — buy after 3 green months",
   "VIX spikes predict market crashes",
-  "S&P500 has positive returns over any rolling 10-year period"
+  "S&P500 has positive returns over any rolling 10-year period",
 ];
 
 const styles = `
@@ -190,10 +190,7 @@ const styles = `
 
   .example-chip:hover { background: #222; color: var(--yellow); }
 
-  .input-row {
-    display: flex;
-    gap: 0;
-  }
+  .input-row { display: flex; gap: 0; }
 
   .input-hypothesis {
     flex: 1;
@@ -226,7 +223,7 @@ const styles = `
     text-align: center;
   }
 
-  .select-ref:focus { box-shadow: inset 0 0 0 2px var(--yellow)); }
+  .select-ref:focus { box-shadow: inset 0 0 0 2px var(--yellow); }
 
   .btn-run {
     padding: 14px 32px;
@@ -329,11 +326,7 @@ const styles = `
     letter-spacing: 1px;
   }
 
-  .status-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-  }
+  .status-grid { display: flex; flex-direction: column; gap: 0; }
 
   .status-row {
     display: flex;
@@ -356,16 +349,8 @@ const styles = `
     text-transform: uppercase;
   }
 
-  .status-value {
-    font-family: var(--font-display);
-    font-size: 18px;
-    letter-spacing: 1px;
-  }
-
-  .status-value.mono {
-    font-family: var(--font-mono);
-    font-size: 11px;
-  }
+  .status-value { font-family: var(--font-display); font-size: 18px; letter-spacing: 1px; }
+  .status-value.mono { font-family: var(--font-mono); font-size: 11px; }
 
   .badge {
     display: inline-block;
@@ -430,11 +415,7 @@ const styles = `
   .report-body li { margin-bottom: 4px; }
   .report-body blockquote { border-left: 4px solid var(--yellow); padding-left: 16px; color: #888; margin: 12px 0; }
 
-  .chart-img {
-    width: 100%;
-    border: var(--border);
-    display: block;
-  }
+  .chart-img { width: 100%; border: var(--border); display: block; }
 
   .grave-item {
     border: var(--border);
@@ -479,11 +460,7 @@ const styles = `
   .grave-verdict-tag.weak { background: var(--yellow); color: var(--black); }
   .grave-verdict-tag.none { background: #333; color: #888; }
 
-  .grave-stats {
-    display: flex;
-    gap: 0;
-    padding: 0;
-  }
+  .grave-stats { display: flex; gap: 0; padding: 0; }
 
   .grave-stat {
     flex: 1;
@@ -530,10 +507,7 @@ const styles = `
   .btn-view-report.show { background: var(--black); color: var(--yellow); }
   .btn-view-report.hide { background: var(--yellow); color: var(--black); }
 
-  .grave-report-wrapper {
-    margin-top: 16px;
-    animation: slide-in 0.2s ease-out;
-  }
+  .grave-report-wrapper { margin-top: 16px; animation: slide-in 0.2s ease-out; }
 
   .job-item {
     border: var(--border);
@@ -678,6 +652,42 @@ export default function App() {
     fetchJobs();
   }, []);
 
+  // ── Load an existing job into the Research tab ──────────
+  const loadJob = async (id) => {
+    // Stop any current polling
+    setPolling(false);
+    clearInterval(pollRef.current);
+
+    // Reset Research tab state
+    setJobId(id);
+    setTab("research");
+    setReport("");
+    setChartUrl("");
+    setLogs([]);
+    setJob(null);
+
+    try {
+      const [statusRes, logsRes] = await Promise.all([
+        axios.get(`${API}/research/${id}`),
+        axios.get(`${API}/research/${id}/logs`),
+      ]);
+      setJob(statusRes.data);
+      setLogs(logsRes.data.logs || []);
+
+      if (statusRes.data.status === "running") {
+        // Job still running — restart polling
+        setPolling(true);
+      } else if (statusRes.data.status === "completed") {
+        // Job done — fetch report and chart
+        try {
+          const repRes = await axios.get(`${API}/research/${id}/report`);
+          setReport(repRes.data.report || "");
+        } catch {}
+        setChartUrl(`${API}/research/${id}/chart?t=${Date.now()}`);
+      }
+    } catch {}
+  };
+
   const startResearch = async () => {
     if (!hypothesis.trim()) return;
     setLoading(true);
@@ -745,7 +755,7 @@ export default function App() {
     "◆ REAL-TIME BACKTESTING",
     "◆ SHARPE RATIO ANALYSIS",
     "⚡ QUANT RESEARCH AGENT",
-    "◆ LANGGRAPH + GPT-4O + E2B",
+    "◆ LANGGRAPH + GPT-5-mini + E2B",
     "◆ AUTOMATED HYPOTHESIS TESTING",
     "◆ LIVE AGENT ORCHESTRATION",
     "◆ REAL-TIME BACKTESTING",
@@ -760,7 +770,7 @@ export default function App() {
           <div className="header-brand">
             <div className="header-title">⚡ QUANT RESEARCH AGENT</div>
             <div className="header-sub">
-              LANGGRAPH · GPT-4O · E2B · BACKTESTING ENGINE
+              LANGGRAPH · GPT-5-mini · E2B · BACKTESTING ENGINE
             </div>
           </div>
           <nav className="nav-tabs">
@@ -1113,7 +1123,6 @@ export default function App() {
                         </div>
                       </div>
 
-                      {/* Expanded reasoning + report viewer */}
                       {expanded === entry.id && (
                         <div className="grave-reasoning">
                           {entry.reasoning && (
@@ -1133,8 +1142,6 @@ export default function App() {
                               {entry.suggested_refinement}
                             </>
                           )}
-
-                          {/* View Report Button */}
                           <div style={{ marginTop: 16 }}>
                             <button
                               className={`btn-view-report ${graveyardReportId === entry.id ? "hide" : "show"}`}
@@ -1147,8 +1154,6 @@ export default function App() {
                                   : "▼ VIEW REPORT"}
                             </button>
                           </div>
-
-                          {/* Inline Report */}
                           {graveyardReportId === entry.id &&
                             graveyardReport && (
                               <div className="grave-report-wrapper">
@@ -1204,10 +1209,7 @@ export default function App() {
                     <div
                       key={j.job_id}
                       className="job-item"
-                      onClick={() => {
-                        setJobId(j.job_id);
-                        setTab("research");
-                      }}
+                      onClick={() => loadJob(j.job_id)}
                     >
                       <div
                         className={`job-status-bar ${getStatusClass(j.status)}`}
