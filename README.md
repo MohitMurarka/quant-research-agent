@@ -18,7 +18,7 @@ The system autonomously:
 
 - 🔍 **Plans** the research approach and selects relevant assets + timeframe
 - 👤 **Asks for approval** before writing any code (human-in-the-loop)
-- ✍️ **Writes** Python backtesting code from scratch using GPT-4o
+- ✍️ **Writes** Python backtesting code from scratch using GPT-5-mini
 - ⚙️ **Executes** it securely in an isolated E2B cloud sandbox
 - 📊 **Evaluates** statistical significance — Sharpe ratio, p-values, bootstrap CIs, win rate
 - 🔄 **Refines** the hypothesis autonomously if results are weak
@@ -114,7 +114,7 @@ The **Planner reads the Graveyard before every run**, so the system builds insti
 | Layer                | Technology       | Why                                             |
 | -------------------- | ---------------- | ----------------------------------------------- |
 | Agent Orchestration  | **LangGraph**    | Stateful cyclic graphs with conditional routing |
-| LLM                  | **GPT-4o**       | Code generation + statistical reasoning         |
+| LLM                  | **GPT-5-mini**       | Code generation + statistical reasoning         |
 | Code Execution       | **E2B Sandbox**  | Isolated cloud VM for untrusted LLM code        |
 | Financial Data       | **yfinance**     | Free historical OHLCV data                      |
 | Statistical Analysis | **scipy, numpy** | Bootstrap CIs, permutation tests, OLS           |
@@ -132,7 +132,7 @@ quant-research-agent/
 │
 ├── agents/                  # One file per agent
 │   ├── planner.py           # Research planning + graveyard awareness
-│   ├── code_writer.py       # GPT-4o backtesting code generation
+│   ├── code_writer.py       # GPT-5-mini backtesting code generation
 │   ├── executor.py          # E2B sandboxed execution
 │   ├── analyst.py           # Statistical evaluation + verdict
 │   ├── refiner.py           # Hypothesis refinement
